@@ -1,5 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.colors import TwoSlopeNorm
+import numpy as np
 
 
 def read_load_profile(path):
@@ -121,11 +123,22 @@ def plot_heatmap(ax, df, value_col, title, cmap='viridis'):
         aggfunc='mean'
     )
 
+    # Tatsächliche Grenzen der CSV verwenden
+    vmin = df[value_col].min()
+    vmax = df[value_col].max()
+
+    norm = TwoSlopeNorm(
+        vmin=vmin,
+        vcenter=0,
+        vmax=vmax
+    )
+
     im = ax.imshow(
         heatmap_table,
         aspect='auto',
         cmap=cmap,
-        origin='lower'
+        origin='lower',
+        norm=norm
     )
 
     ax.set_title(title)
@@ -156,9 +169,8 @@ def plot_load_heatmap(lp):
     plt.tight_layout()
     plt.show()
 
-
 def main():
-    path = r'Last Krankenhaus ohne FCR & konv. Stromtarife2026-09-12.csv'
+    path = r'Lastfluss NAP Krankenhaus FCR & dyn. Stromtarife2026-09-12.csv'
 
     lp = read_load_profile(path)
 
