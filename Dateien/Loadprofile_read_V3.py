@@ -3,21 +3,40 @@ import matplotlib.pyplot as plt
 
 
 def read_load_profile(path):
-    lp = pd.read_csv(path, sep=';', decimal=',')
+    # CSV einlesen
+    lp = pd.read_csv(path)
 
-    # Leere Spalten entfernen wegen ;;;;;;;
-    lp = lp.dropna(axis=1, how='all')
+    # Erste Spalte = alter Index / Snapshot
+    # Zweite Spalte = Leistung
+    if len(lp.columns) >= 2:
+        lp = lp.iloc[:, :2]
+        lp.columns = ['old_index', 'kW']
 
-    lp['timestamp_UTC'] = pd.to_datetime(
-        lp['Ab-Datum'].astype(str) + ' ' + lp['Ab-Zeit'].astype(str),
-        format='%d.%m.%Y %H:%M:%S',
-        errors='coerce'
+    else:
+        lp.columns = ['kW']
+
+    # Leistung sicher numerisch machen
+    lp['kW'] = pd.to_numeric(lp['kW'], errors='coerce')
+
+    # Ungültige Werte entfernen
+    lp = lp.dropna(subset=['kW']).reset_index(drop=True)
+
+    # -----------------------------------------------------
+    # Neue Zeitachse:
+    # 01.01.2026 bis 31.12.2026
+    # -----------------------------------------------------
+
+    start = pd.Timestamp('2026-01-01 00:00:00')
+    end = pd.Timestamp('2027-01-01 00:00:00')
+
+    # Zeitschritt automatisch aus Anzahl der Werte bestimmen
+    timestep = (end - start) / len(lp)
+
+    lp['timestamp_UTC'] = pd.date_range(
+        start=start,
+        periods=len(lp),
+        freq=timestep
     )
-
-    lp['kW'] = pd.to_numeric(lp['kW'], errors='coerce')
-    lp['kW'] = pd.to_numeric(lp['kW'], errors='coerce')
-
-    lp = lp.dropna(subset=['timestamp_UTC', 'kW'])
 
     return lp
 
@@ -78,7 +97,7 @@ def plot_load_profile(lp):
         label=f'Minimum: {lp_min:.2f} kW'
     )
 
-    ax.set_title('Lastgang eines Krankenhauses')
+    ax.set_title('Lastgang mit konventionellen Tarifen & FRC')
     ax.set_xlabel('Zeit')
     ax.set_ylabel('Last [kW]')
     ax.grid(True)
@@ -130,7 +149,7 @@ def plot_load_heatmap(lp):
         ax=ax,
         df=lp,
         value_col='kW',
-        title='Heatmap des Lastprofils [kW]',
+        title='Heatmap des Lastprofils mit konventionellen Tarifen & ohne FCR [kW]',
         cmap='viridis'
     )
 
@@ -139,13 +158,13 @@ def plot_load_heatmap(lp):
 
 
 def main():
-    path = r'Stromlastgang_Krankenhaus.csv'
+    path = r'Last Krankenhaus ohne FCR & konv. Stromtarife2026-09-12.csv'
 
     lp = read_load_profile(path)
 
     print_statistics(lp)
 
-    plot_load_profile(lp)
+#    plot_load_profile(lp)
     plot_load_heatmap(lp)
 
 
